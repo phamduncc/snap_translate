@@ -116,8 +116,8 @@ class AppUtils {
   static String generateUniqueId() {
     return DateTime.now().millisecondsSinceEpoch.toString();
   }
-  
-  // Debounce function
+
+  // Debounce utility
   static Timer? _debounceTimer;
   static void debounce(VoidCallback callback, Duration delay) {
     _debounceTimer?.cancel();

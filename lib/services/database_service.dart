@@ -192,7 +192,7 @@ class DatabaseService {
 
   Future<void> updateTranslationFavorite(String id, bool isFavorite) async {
     await _ensureInitialized();
-    
+
     try {
       await _database!.update(
         AppConstants.translationHistoryTable,
@@ -202,6 +202,23 @@ class DatabaseService {
       );
     } catch (e) {
       throw DatabaseException('Failed to update translation favorite: $e');
+    }
+  }
+
+  Future<List<TranslationModel>> getFavoriteTranslations() async {
+    await _ensureInitialized();
+
+    try {
+      final List<Map<String, dynamic>> maps = await _database!.query(
+        AppConstants.translationHistoryTable,
+        where: 'is_favorite = ?',
+        whereArgs: [1],
+        orderBy: 'created_at DESC',
+      );
+
+      return maps.map((map) => TranslationModel.fromMap(map)).toList();
+    } catch (e) {
+      throw DatabaseException('Failed to get favorite translations: $e');
     }
   }
 

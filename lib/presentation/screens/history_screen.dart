@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import '../../services/tts_service.dart';
 import '../../data/models/translation_model.dart';
 import '../../data/models/language_model.dart';
+import 'favorites_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -69,6 +70,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return AppBar(
       title: const Text('Lịch sử dịch'),
       actions: [
+        IconButton(
+          onPressed: _navigateToFavorites,
+          icon: const Icon(Icons.favorite),
+          tooltip: 'Yêu thích',
+        ),
         IconButton(
           onPressed: _showFilterDialog,
           icon: const Icon(Icons.filter_list),
@@ -697,5 +703,14 @@ Dịch bởi SnapTranslate
         .firstWhere((lang) => lang.code == languageCode,
                    orElse: () => LanguageModel(code: languageCode, name: languageCode, nativeName: languageCode));
     return language.nativeName;
+  }
+
+  void _navigateToFavorites() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FavoritesScreen(),
+      ),
+    );
   }
 }

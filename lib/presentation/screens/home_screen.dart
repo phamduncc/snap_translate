@@ -7,6 +7,9 @@ import 'image_translation_screen.dart';
 import 'camera_translation_screen.dart';
 import 'history_screen.dart';
 import 'vocabulary_screen.dart';
+import 'voice_translation_screen.dart';
+import 'text_translation_screen.dart';
+import 'analytics_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -35,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _buildFeatureGrid(),
               ),
-              _buildBottomNavigation(),
+              // _buildBottomNavigation(),
             ],
           ),
         ),
@@ -82,6 +85,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           IconButton(
+            onPressed: () => _navigateToAnalytics(),
+            icon: const Icon(
+              Icons.analytics,
+              color: AppColors.textSecondaryColor,
+            ),
+          ),
+          IconButton(
             onPressed: () => _navigateToSettings(),
             icon: const Icon(
               Icons.settings,
@@ -116,22 +126,29 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.1,
+        childAspectRatio: 1.0,
         children: [
+          FeatureCard(
+            icon: Icons.translate,
+            title: 'Dịch văn bản',
+            subtitle: 'Nhập và dịch văn bản',
+            color: AppColors.primaryColor,
+            onTap: () => _navigateToTextTranslation(),
+          ),
           FeatureCard(
             icon: Icons.camera_alt,
             title: 'Chụp ảnh dịch',
             subtitle: 'Chụp ảnh và dịch văn bản',
-            color: AppColors.primaryColor,
+            color: AppColors.secondaryColor,
             onTap: () => _navigateToImageTranslation(),
           ),
-          FeatureCard(
-            icon: Icons.videocam,
-            title: 'Camera trực tiếp',
-            subtitle: 'Dịch real-time qua camera',
-            color: AppColors.secondaryColor,
-            onTap: () => _navigateToCameraTranslation(),
-          ),
+          // FeatureCard(
+          //   icon: Icons.videocam,
+          //   title: 'Camera trực tiếp',
+          //   subtitle: 'Dịch real-time qua camera',
+          //   color: AppColors.secondaryColor,
+          //   onTap: () => _navigateToCameraTranslation(),
+          // ),
           FeatureCard(
             icon: Icons.history,
             title: 'Lịch sử',
@@ -145,6 +162,13 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: 'Flashcard và ôn tập',
             color: AppColors.warningColor,
             onTap: () => _navigateToVocabulary(),
+          ),
+          FeatureCard(
+            icon: Icons.mic,
+            title: 'Dịch hội thoại',
+            subtitle: 'Dịch giọng nói 2 chiều',
+            color: AppColors.errorColor,
+            onTap: () => _navigateToVoiceTranslation(),
           ),
         ],
       ),
@@ -218,6 +242,39 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const VocabularyScreen(),
+      ),
+    );
+  }
+
+  void _navigateToVoiceTranslation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VoiceTranslationScreen(
+          sourceLanguage: _sourceLanguage,
+          targetLanguage: _targetLanguage,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToTextTranslation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TextTranslationScreen(
+          sourceLanguage: _sourceLanguage,
+          targetLanguage: _targetLanguage,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAnalytics() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AnalyticsScreen(),
       ),
     );
   }

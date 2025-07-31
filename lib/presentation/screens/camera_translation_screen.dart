@@ -16,13 +16,31 @@ class TranslationOverlay {
   final String translatedText;
   final Offset position;
   final DateTime createdAt;
+  final bool isVisible;
 
   TranslationOverlay({
     required this.originalText,
     required this.translatedText,
     required this.position,
     required this.createdAt,
+    this.isVisible = true,
   });
+
+  TranslationOverlay copyWith({
+    String? originalText,
+    String? translatedText,
+    Offset? position,
+    DateTime? createdAt,
+    bool? isVisible,
+  }) {
+    return TranslationOverlay(
+      originalText: originalText ?? this.originalText,
+      translatedText: translatedText ?? this.translatedText,
+      position: position ?? this.position,
+      createdAt: createdAt ?? this.createdAt,
+      isVisible: isVisible ?? this.isVisible,
+    );
+  }
 }
 
 class CameraTranslationScreen extends StatefulWidget {
@@ -316,49 +334,93 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
     return Positioned(
       left: overlay.position.dx,
       top: overlay.position.dy,
-      child: GestureDetector(
-        onTap: () => _speakTranslation(overlay.translatedText),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.translationOverlayColor,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          constraints: const BoxConstraints(maxWidth: 200),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                overlay.originalText,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondaryColor,
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 500),
+        tween: Tween(begin: 0.0, end: 1.0),
+        builder: (context, opacity, child) {
+          return Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: 0.8 + (0.2 * opacity),
+              child: GestureDetector(
+                onTap: () => _speakTranslation(overlay.translatedText),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primaryColor,
+                        AppColors.primaryDarkColor,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: AppColors.primaryColor.withValues(alpha: 0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                  constraints: const BoxConstraints(
+                    maxWidth: 300,
+                    minHeight: 44,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          overlay.translatedText,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black38,
+                                offset: Offset(1, 1),
+                                blurRadius: 3,
+                              ),
+                            ],
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          Icons.volume_up,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
-              Text(
-                overlay.translatedText,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimaryColor,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -427,20 +489,33 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
     });
   }
 
+  // Auto-clear old overlays
+  void _autoCleanupOverlays() {
+    final now = DateTime.now();
+    setState(() {
+      _translationOverlays.removeWhere((overlay) {
+        final age = now.difference(overlay.createdAt);
+        return age.inSeconds > 15; // Remove overlays older than 15 seconds
+      });
+    });
+  }
+
   // Real-time processing methods
   void _startRealTimeProcessing() {
     if (_isPaused) return;
 
     _processingTimer?.cancel();
-    _processingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!_isPaused && _isInitialized && !_isProcessing) {
+    // Increase interval to 3 seconds to reduce processing frequency
+    _processingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!_isPaused && _isInitialized && !_isProcessing && !_isTranslating) {
         _processCurrentFrame();
+        _autoCleanupOverlays(); // Clean up old overlays
       }
     });
   }
 
   Future<void> _processCurrentFrame() async {
-    if (_isProcessing || _isPaused) return;
+    if (_isProcessing || _isPaused || _isTranslating) return;
 
     setState(() {
       _isProcessing = true;
@@ -453,8 +528,29 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
       // Perform OCR
       final ocrResult = await _ocrService.extractTextFromImage(imageFile);
 
-      if (ocrResult.hasText && ocrResult.isHighConfidence) {
-        await _translateAndAddOverlay(ocrResult.fullText);
+      // Only process if text is found, has high confidence, and is substantial
+      if (ocrResult.hasText &&
+          ocrResult.isHighConfidence &&
+          ocrResult.fullText.trim().length > 3) {
+
+        // Check if this text is significantly different from existing overlays
+        final normalizedNewText = ocrResult.fullText.trim().toLowerCase();
+        bool isDifferentText = true;
+
+        for (final overlay in _translationOverlays) {
+          final normalizedExistingText = overlay.originalText.trim().toLowerCase();
+
+          // Calculate similarity (simple approach)
+          if (_calculateTextSimilarity(normalizedNewText, normalizedExistingText) > 0.8) {
+            isDifferentText = false;
+            break;
+          }
+        }
+
+        // Only translate if it's significantly different text
+        if (isDifferentText) {
+          await _translateAndAddOverlay(ocrResult.fullText);
+        }
       }
 
       // Clean up temporary image
@@ -516,6 +612,26 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
   Future<void> _translateAndAddOverlay(String originalText) async {
     if (originalText.trim().isEmpty) return;
 
+    // Check if this text is already being translated or already exists
+    final normalizedText = originalText.trim().toLowerCase();
+    final existingOverlay = _translationOverlays.firstWhere(
+      (overlay) => overlay.originalText.trim().toLowerCase() == normalizedText,
+      orElse: () => TranslationOverlay(
+        originalText: '',
+        translatedText: '',
+        position: const Offset(0, 0),
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    // If overlay already exists and is recent (within 10 seconds), don't create new one
+    if (existingOverlay.originalText.isNotEmpty) {
+      final timeDifference = DateTime.now().difference(existingOverlay.createdAt);
+      if (timeDifference.inSeconds < 10) {
+        return; // Skip duplicate translation
+      }
+    }
+
     setState(() {
       _isTranslating = true;
     });
@@ -528,7 +644,12 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
       );
 
       if (result.isSuccessful) {
-        // Add translation overlay at a random position
+        // Remove any existing overlay with the same original text
+        _translationOverlays.removeWhere(
+          (overlay) => overlay.originalText.trim().toLowerCase() == normalizedText,
+        );
+
+        // Add new translation overlay
         final overlay = TranslationOverlay(
           originalText: originalText,
           translatedText: result.translatedText,
@@ -539,8 +660,8 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
         setState(() {
           _translationOverlays.add(overlay);
 
-          // Keep only the last 5 overlays to avoid clutter
-          if (_translationOverlays.length > 5) {
+          // Keep only the last 3 overlays to avoid clutter
+          if (_translationOverlays.length > 3) {
             _translationOverlays.removeAt(0);
           }
         });
@@ -559,13 +680,56 @@ class _CameraTranslationScreenState extends State<CameraTranslationScreen>
 
   Offset _generateRandomPosition() {
     final screenSize = MediaQuery.of(context).size;
-    final random = DateTime.now().millisecondsSinceEpoch;
 
-    // Generate position in the middle area of the screen
-    final x = (random % (screenSize.width - 220).toInt()).toDouble() + 10;
-    final y = (random % (screenSize.height - 400).toInt()).toDouble() + 200;
+    // Define safe area for overlays
+    const overlayWidth = 200.0;
+    const overlayHeight = 80.0;
+    const margin = 20.0;
 
-    return Offset(x, y);
+    final safeWidth = screenSize.width - overlayWidth - margin * 2;
+    final safeHeight = screenSize.height - overlayHeight - 300; // Account for top/bottom controls
+
+    // Try to find a position that doesn't overlap with existing overlays
+    for (int attempt = 0; attempt < 10; attempt++) {
+      final random = DateTime.now().millisecondsSinceEpoch + attempt;
+      final x = (random % safeWidth.toInt()).toDouble() + margin;
+      final y = (random % safeHeight.toInt()).toDouble() + 250; // Start below language selector
+
+      final newPosition = Offset(x, y);
+
+      // Check if this position overlaps with existing overlays
+      bool hasOverlap = false;
+      for (final overlay in _translationOverlays) {
+        final distance = (newPosition - overlay.position).distance;
+        if (distance < 120) { // Minimum distance between overlays
+          hasOverlap = true;
+          break;
+        }
+      }
+
+      if (!hasOverlap) {
+        return newPosition;
+      }
+    }
+
+    // Fallback to a basic position if no good position found
+    return Offset(margin, 250 + (_translationOverlays.length * 90).toDouble());
+  }
+
+  // Calculate text similarity (simple Jaccard similarity)
+  double _calculateTextSimilarity(String text1, String text2) {
+    if (text1 == text2) return 1.0;
+    if (text1.isEmpty || text2.isEmpty) return 0.0;
+
+    // Split into words
+    final words1 = text1.split(' ').toSet();
+    final words2 = text2.split(' ').toSet();
+
+    // Calculate Jaccard similarity
+    final intersection = words1.intersection(words2).length;
+    final union = words1.union(words2).length;
+
+    return union > 0 ? intersection / union : 0.0;
   }
 
   // Text-to-Speech methods
