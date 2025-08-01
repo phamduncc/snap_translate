@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/feature_card.dart';
 import '../widgets/language_selector.dart';
+import 'quiz_screen.dart';
 import 'image_translation_screen.dart';
 import 'camera_translation_screen.dart';
 import 'history_screen.dart';
@@ -143,13 +144,13 @@ class _HomeScreenState extends State<HomeScreen> {
             color: AppColors.secondaryColor,
             onTap: () => _navigateToImageTranslation(),
           ),
-          // FeatureCard(
-          //   icon: Icons.videocam,
-          //   title: 'Camera trực tiếp',
-          //   subtitle: 'Dịch real-time qua camera',
-          //   color: AppColors.secondaryColor,
-          //   onTap: () => _navigateToCameraTranslation(),
-          // ),
+          FeatureCard(
+            icon: Icons.quiz,
+            title: AppLocalizations.of(context)?.quizMode ?? 'Quiz Mode',
+            subtitle: AppLocalizations.of(context)?.testYourKnowledge ?? 'Test your vocabulary knowledge',
+            color: Colors.purple,
+            onTap: () => _navigateToQuiz(),
+          ),
           FeatureCard(
             icon: Icons.history,
             title: AppLocalizations.of(context)?.history ?? 'History',
@@ -243,6 +244,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const VocabularyScreen(),
+      ),
+    );
+  }
+
+  void _navigateToQuiz() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const QuizScreen(),
       ),
     );
   }

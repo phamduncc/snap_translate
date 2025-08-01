@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 
 import '../../data/models/vocabulary_model.dart';
 import '../../data/models/language_model.dart';
+import 'quiz_screen.dart';
 
 
 class VocabularyScreen extends StatefulWidget {
@@ -100,6 +101,16 @@ class _VocabularyScreenState extends State<VocabularyScreen>
                     const Icon(Icons.school, color: AppColors.primaryColor),
                     const SizedBox(width: 8),
                     Text(AppLocalizations.of(context)?.studyMode ?? 'Study Mode'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'quiz_mode',
+                child: Row(
+                  children: [
+                    const Icon(Icons.quiz, color: AppColors.successColor),
+                    const SizedBox(width: 8),
+                    const Text('Quiz Mode'),
                   ],
                 ),
               ),
@@ -524,6 +535,9 @@ class _VocabularyScreenState extends State<VocabularyScreen>
       case 'study_mode':
         _enterStudyMode();
         break;
+      case 'quiz_mode':
+        _navigateToQuizMode();
+        break;
       case 'import_from_history':
         AppUtils.showSnackBar(context, 'Tính năng nhập từ lịch sử sẽ được thêm sau');
         break;
@@ -541,6 +555,20 @@ class _VocabularyScreenState extends State<VocabularyScreen>
       _currentCardIndex = 0;
       _showAnswer = false;
     });
+  }
+
+  void _navigateToQuizMode() {
+    if (_filteredVocabulary.isEmpty) {
+      AppUtils.showSnackBar(context, 'Không có từ vựng để tạo quiz', isError: true);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const QuizScreen(),
+      ),
+    );
   }
 
   void _exitStudyMode() {

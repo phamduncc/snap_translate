@@ -108,6 +108,12 @@ class AppLocalizations {
   String get next => _localizedValues[locale.languageCode]?['next'] ?? 'Sau';
   String get previous => _localizedValues[locale.languageCode]?['previous'] ?? 'Trước';
 
+  // Quiz System
+  String get quizMode => _localizedValues[locale.languageCode]?['quiz_mode'] ?? 'Quiz Mode';
+  String get startQuiz => _localizedValues[locale.languageCode]?['start_quiz'] ?? 'Start Quiz';
+  String get quizSetup => _localizedValues[locale.languageCode]?['quiz_setup'] ?? 'Quiz Setup';
+  String get testYourKnowledge => _localizedValues[locale.languageCode]?['test_your_knowledge'] ?? 'Test your vocabulary knowledge';
+
   // Messages
   String get pleaseEnterText => _localizedValues[locale.languageCode]?['please_enter_text'] ?? 'Vui lòng nhập văn bản cần dịch';
   String get pleaseEnterWordAndTranslation => _localizedValues[locale.languageCode]?['please_enter_word_and_translation'] ?? 'Vui lòng nhập đầy đủ từ và bản dịch';
@@ -192,6 +198,10 @@ class AppLocalizations {
       'hide_answer': 'Ẩn đáp án',
       'next': 'Sau',
       'previous': 'Trước',
+      'quiz_mode': 'Quiz Mode',
+      'start_quiz': 'Bắt đầu Quiz',
+      'quiz_setup': 'Cài đặt Quiz',
+      'test_your_knowledge': 'Kiểm tra kiến thức từ vựng',
       'please_enter_text': 'Vui lòng nhập văn bản cần dịch',
       'please_enter_word_and_translation': 'Vui lòng nhập đầy đủ từ và bản dịch',
       'word_already_exists': 'Từ này đã có trong từ vựng',
@@ -274,6 +284,10 @@ class AppLocalizations {
       'hide_answer': 'Hide Answer',
       'next': 'Next',
       'previous': 'Previous',
+      'quiz_mode': 'Quiz Mode',
+      'start_quiz': 'Start Quiz',
+      'quiz_setup': 'Quiz Setup',
+      'test_your_knowledge': 'Test your vocabulary knowledge',
       'please_enter_text': 'Please enter text to translate',
       'please_enter_word_and_translation': 'Please enter both word and translation',
       'word_already_exists': 'This word already exists in vocabulary',
