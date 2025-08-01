@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import '../../services/tts_service.dart';
 import '../../data/models/translation_model.dart';
 import '../../data/models/language_model.dart';
+import '../../l10n/app_localizations.dart';
 import 'favorites_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text('Lịch sử dịch'),
+      title: Text(AppLocalizations.of(context)?.history ?? 'History'),
       actions: [
         IconButton(
           onPressed: _navigateToFavorites,
@@ -115,7 +116,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Tìm kiếm trong lịch sử...',
+          hintText: 'Search in history...',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(

@@ -8,6 +8,7 @@ import '../../services/translation_service.dart';
 import '../../services/tts_service.dart';
 import '../../services/database_service.dart';
 import '../../data/models/translation_model.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/language_selector.dart';
 
 // Conversation message model
@@ -144,7 +145,7 @@ class _VoiceTranslationScreenState extends State<VoiceTranslationScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text('Dịch hội thoại'),
+      title: Text(AppLocalizations.of(context)?.voiceTranslation ?? 'Voice Translation'),
       backgroundColor: Colors.black87,
       actions: [
         IconButton(
@@ -209,18 +210,18 @@ class _VoiceTranslationScreenState extends State<VoiceTranslationScreen>
               color: AppColors.textSecondaryColor.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Nhấn micro để bắt đầu hội thoại',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)?.tapMicToStart ?? 'Tap microphone to start conversation',
+              style: const TextStyle(
                 fontSize: 18,
                 color: AppColors.textSecondaryColor,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Nói vào micro, ứng dụng sẽ tự động dịch',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)?.speakIntoMic ?? 'Speak into microphone, app will translate automatically',
+              style: const TextStyle(
                 color: AppColors.textHintColor,
               ),
               textAlign: TextAlign.center,

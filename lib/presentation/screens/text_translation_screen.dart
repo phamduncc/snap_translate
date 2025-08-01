@@ -7,7 +7,10 @@ import '../../services/translation_service.dart';
 import '../../services/tts_service.dart';
 import '../../services/database_service.dart';
 import '../../services/haptic_service.dart';
+import '../../services/vocabulary_service.dart';
+import '../../data/models/vocabulary_model.dart';
 import '../../data/models/translation_model.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/language_selector.dart';
 
 class TextTranslationScreen extends StatefulWidget {
@@ -32,6 +35,7 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
   final TTSService _ttsService = TTSService();
   final DatabaseService _databaseService = DatabaseService();
   final HapticService _hapticService = HapticService();
+  final VocabularyService _vocabularyService = VocabularyService();
 
   final TextEditingController _inputController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
@@ -42,6 +46,10 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
   bool _isTranslating = false;
   bool _hasTranslation = false;
   double _confidence = 0.0;
+
+  // Vocabulary state
+  bool _isWordInVocabulary = false;
+  List<Map<String, String>> _wordSuggestions = [];
 
   // Animation controllers
   late AnimationController _fadeController;
@@ -66,13 +74,23 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
     super.initState();
     _sourceLanguage = widget.sourceLanguage;
     _targetLanguage = widget.targetLanguage;
-    
+
     if (widget.initialText != null) {
       _inputController.text = widget.initialText!;
     }
-    
+
     _initializeAnimations();
     _setupTextListener();
+    _initializeServices();
+  }
+
+  Future<void> _initializeServices() async {
+    try {
+      await _vocabularyService.initialize();
+      print('DEBUG: All services initialized in TextTranslationScreen');
+    } catch (e) {
+      print('ERROR: Failed to initialize services: $e');
+    }
   }
 
   @override
@@ -171,7 +189,7 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text('Dịch văn bản'),
+      title: Text(AppLocalizations.of(context)?.textTranslation ?? 'Text Translation'),
       actions: [
         IconButton(
           onPressed: _clearAll,
@@ -181,23 +199,23 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         PopupMenuButton<String>(
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'swap_languages',
               child: Row(
                 children: [
-                  Icon(Icons.swap_horiz, color: AppColors.primaryColor),
-                  SizedBox(width: 8),
-                  Text('Đổi ngôn ngữ'),
+                  const Icon(Icons.swap_horiz, color: AppColors.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)?.swapLanguages ?? 'Swap Languages'),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'detect_language',
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome, color: AppColors.successColor),
-                  SizedBox(width: 8),
-                  Text('Tự động nhận dạng'),
+                  const Icon(Icons.auto_awesome, color: AppColors.successColor),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)?.autoDetect ?? 'Auto Detect'),
                 ],
               ),
             ),
@@ -257,6 +275,10 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
             flex: 1,
             child: _buildOutputSection(),
           ),
+
+          // Word suggestions section
+          if (_wordSuggestions.isNotEmpty)
+            _buildWordSuggestions(),
         ],
       ),
     );
@@ -458,9 +480,26 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: _hasTranslation ? _saveToVocabulary : null,
-              icon: const Icon(Icons.bookmark_add),
-              label: const Text('Lưu từ vựng'),
+              onPressed: _hasTranslation && !_isWordInVocabulary && _sourceLanguage != 'auto'
+                  ? _saveToVocabulary
+                  : null,
+              icon: Icon(_isWordInVocabulary ? Icons.bookmark : Icons.bookmark_add),
+              label: Text(_sourceLanguage == 'auto'
+                  ? 'Không thể lưu'
+                  : _isWordInVocabulary
+                      ? 'Đã lưu'
+                      : 'Lưu từ vựng'),
+              style: _isWordInVocabulary
+                  ? OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.successColor,
+                      side: const BorderSide(color: AppColors.successColor),
+                    )
+                  : _sourceLanguage == 'auto'
+                      ? OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textSecondaryColor,
+                          side: const BorderSide(color: AppColors.textSecondaryColor),
+                        )
+                      : null,
             ),
           ),
           const SizedBox(width: 16),
@@ -604,6 +643,10 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         _fadeController.forward();
         _slideController.forward();
         _hapticService.translationComplete();
+
+        // Check vocabulary status and generate suggestions
+        _checkVocabularyStatus();
+        _generateWordSuggestions();
       } else {
         if (mounted) {
           AppUtils.showSnackBar(
@@ -678,8 +721,152 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
   }
 
   Future<void> _saveToVocabulary() async {
-    // This would open a dialog to save to vocabulary
-    AppUtils.showSnackBar(context, 'Tính năng lưu từ vựng sẽ được thêm sau');
+    if (!_hasTranslation) return;
+
+    // Show vocabulary save dialog
+    _showVocabularySaveDialog();
+  }
+
+  void _showVocabularySaveDialog() {
+    final TextEditingController wordController = TextEditingController(text: _inputController.text.trim());
+    final TextEditingController translationController = TextEditingController(text: _translatedText.trim());
+    final TextEditingController notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lưu vào từ vựng'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: wordController,
+                decoration: const InputDecoration(
+                  labelText: 'Từ/Cụm từ',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: translationController,
+                decoration: const InputDecoration(
+                  labelText: 'Bản dịch',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú (tùy chọn)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final word = wordController.text.trim();
+              final translation = translationController.text.trim();
+
+              if (word.isEmpty || translation.isEmpty) {
+                AppUtils.showSnackBar(context, 'Vui lòng nhập đầy đủ từ và bản dịch', isError: true);
+                return;
+              }
+
+              Navigator.pop(context);
+              await _addToVocabulary(
+                word: word,
+                translation: translation,
+                notes: notesController.text.trim(),
+              );
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addToVocabulary({
+    required String word,
+    required String translation,
+    String? notes,
+  }) async {
+    try {
+      print('DEBUG: _addToVocabulary called with word: $word, translation: $translation');
+      print('DEBUG: Source language: $_sourceLanguage, Target language: $_targetLanguage');
+
+      // Validate language codes
+      if (_sourceLanguage == 'auto') {
+        if (mounted) {
+          AppUtils.showSnackBar(
+            context,
+            'Không thể lưu từ vựng với ngôn ngữ "Tự động phát hiện"',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      final success = await _vocabularyService.addToVocabulary(
+        word: word,
+        translation: translation,
+        sourceLanguage: _sourceLanguage,
+        targetLanguage: _targetLanguage,
+        definition: notes,
+        example: _inputController.text.trim(),
+        exampleTranslation: _translatedText.trim(),
+      );
+
+      print('DEBUG: VocabularyService.addToVocabulary returned: $success');
+
+      if (success) {
+        _hapticService.success();
+        if (mounted) {
+          AppUtils.showSnackBar(
+            context,
+            'Đã lưu "$word" vào từ vựng',
+          );
+        }
+
+        // Update vocabulary status
+        setState(() {
+          _isWordInVocabulary = true;
+        });
+        print('DEBUG: Successfully added to vocabulary and updated UI');
+      } else {
+        _hapticService.error();
+        if (mounted) {
+          AppUtils.showSnackBar(
+            context,
+            'Từ này đã có trong từ vựng',
+            isError: true,
+          );
+        }
+        print('DEBUG: Word already exists in vocabulary');
+      }
+    } catch (e) {
+      print('ERROR: Exception in _addToVocabulary: $e');
+      _hapticService.error();
+      if (mounted) {
+        AppUtils.showSnackBar(
+          context,
+          'Lỗi khi lưu từ vựng: $e',
+          isError: true,
+        );
+      }
+    }
   }
 
   Future<void> _saveToHistory() async {
@@ -754,5 +941,89 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
   String _getLanguageName(String languageCode) {
     // This would use the language model to get display name
     return languageCode.toUpperCase();
+  }
+
+  // Vocabulary helper methods
+  Future<void> _checkVocabularyStatus() async {
+    if (_inputController.text.trim().isEmpty) return;
+
+    final isInVocab = await _vocabularyService.isWordInVocabulary(
+      word: _inputController.text.trim(),
+      sourceLanguage: _sourceLanguage,
+      targetLanguage: _targetLanguage,
+    );
+
+    setState(() {
+      _isWordInVocabulary = isInVocab;
+    });
+  }
+
+  void _generateWordSuggestions() {
+    if (_inputController.text.trim().isEmpty || _translatedText.trim().isEmpty) {
+      setState(() {
+        _wordSuggestions = [];
+      });
+      return;
+    }
+
+    final suggestions = _vocabularyService.getWordSuggestions(
+      originalText: _inputController.text.trim(),
+      translatedText: _translatedText.trim(),
+      sourceLanguage: _sourceLanguage,
+      targetLanguage: _targetLanguage,
+    );
+
+    setState(() {
+      _wordSuggestions = suggestions;
+    });
+  }
+
+  Widget _buildWordSuggestions() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Từ vựng gợi ý',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _wordSuggestions.length,
+              itemBuilder: (context, index) {
+                final suggestion = _wordSuggestions[index];
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    label: Text(
+                      '${suggestion['word']} → ${suggestion['translation']}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () => _addSuggestionToVocabulary(suggestion),
+                    backgroundColor: AppColors.cardColor,
+                    side: const BorderSide(color: AppColors.borderColor),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addSuggestionToVocabulary(Map<String, String> suggestion) async {
+    await _addToVocabulary(
+      word: suggestion['word']!,
+      translation: suggestion['translation']!,
+    );
   }
 }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
 import '../../services/settings_service.dart';
 import '../../services/haptic_service.dart';
+import '../../providers/app_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../data/models/settings_model.dart';
 import '../../data/models/language_model.dart';
@@ -65,44 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cài đặt'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'reset',
-                child: Row(
-                  children: [
-                    Icon(Icons.restore, color: AppColors.warningColor),
-                    SizedBox(width: 8),
-                    Text('Khôi phục mặc định'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.download, color: AppColors.primaryColor),
-                    SizedBox(width: 8),
-                    Text('Xuất cài đặt'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'import',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload, color: AppColors.successColor),
-                    SizedBox(width: 8),
-                    Text('Nhập cài đặt'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        title: Text(AppLocalizations.of(context)?.settings ?? 'Settings'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -114,36 +80,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       children: [
-        _buildSectionHeader('Chung'),
-        _buildLanguageSettings(),
+        _buildSectionHeader(AppLocalizations.of(context)?.general ?? 'General'),
         _buildThemeSettings(),
         _buildNotificationSettings(),
 
-        const SizedBox(height: 24),
-        _buildSectionHeader('Âm thanh'),
-        _buildAutoPlaySettings(),
-        _buildTTSSettings(),
-        _buildSoundEffectsSettings(),
-        _buildVibrationSettings(),
+        // const SizedBox(height: 24),
+        // _buildSectionHeader(AppLocalizations.of(context)?.audio ?? 'Audio'),
+        // _buildAutoPlaySettings(),
+        // _buildTTSSettings(),
+        // _buildSoundEffectsSettings(),
+        // _buildVibrationSettings(),
+
+        // const SizedBox(height: 24),
+        // _buildSectionHeader('Translation'),
+        // _buildOfflineModeSettings(),
+        // _buildAutoDetectSettings(),
+        // _buildConfidenceScoreSettings(),
+
+        // const SizedBox(height: 24),
+        // _buildSectionHeader('Privacy'),
+        // _buildHistorySettings(),
+        // _buildAnalyticsSettings(),
+
+        // const SizedBox(height: 24),
+        // _buildSectionHeader('Advanced'),
+        // _buildCacheSettings(),
+        // _buildMaxHistorySettings(),
 
         const SizedBox(height: 24),
-        _buildSectionHeader('Dịch thuật'),
-        _buildOfflineModeSettings(),
-        _buildAutoDetectSettings(),
-        _buildConfidenceScoreSettings(),
-
-        const SizedBox(height: 24),
-        _buildSectionHeader('Quyền riêng tư'),
-        _buildHistorySettings(),
-        _buildAnalyticsSettings(),
-
-        const SizedBox(height: 24),
-        _buildSectionHeader('Nâng cao'),
-        _buildCacheSettings(),
-        _buildMaxHistorySettings(),
-
-        const SizedBox(height: 24),
-        _buildSectionHeader('Hệ thống'),
+        _buildSectionHeader('System'),
         _buildAppInfoCard(),
 
         const SizedBox(height: 100), // Bottom padding
@@ -171,7 +136,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildDropdownTile(
             icon: Icons.language,
-            title: 'Ngôn ngữ mặc định (Nguồn)',
+            title: AppLocalizations.of(context)?.appLanguage ?? 'App Language',
+            subtitle: _getAppLanguageName(_settings.appLanguage),
+            value: _settings.appLanguage,
+            options: const [
+              {'value': 'vi', 'label': 'Tiếng Việt'},
+              {'value': 'en', 'label': 'English'},
+            ],
+            onChanged: (value) => _updateSetting('appLanguage', value),
+          ),
+          const Divider(height: 1),
+          _buildDropdownTile(
+            icon: Icons.language,
+            title: AppLocalizations.of(context)?.defaultSourceLanguage ?? 'Default Source Language',
             subtitle: _getLanguageName(_settings.defaultSourceLanguage),
             value: _settings.defaultSourceLanguage,
             options: LanguageModel.defaultLanguages.map((lang) => {
@@ -183,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 1),
           _buildDropdownTile(
             icon: Icons.translate,
-            title: 'Ngôn ngữ mặc định (Đích)',
+            title: AppLocalizations.of(context)?.defaultTargetLanguage ?? 'Default Target Language',
             subtitle: _getLanguageName(_settings.defaultTargetLanguage),
             value: _settings.defaultTargetLanguage,
             options: LanguageModel.defaultLanguages.map((lang) => {
@@ -201,13 +178,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildDropdownTile(
         icon: Icons.palette,
-        title: 'Giao diện',
+        title: AppLocalizations.of(context)?.theme ?? 'Theme',
         subtitle: _getThemeName(_settings.appTheme),
         value: _settings.appTheme,
-        options: const [
-          {'value': 'light', 'label': 'Sáng'},
-          {'value': 'dark', 'label': 'Tối'},
-          {'value': 'system', 'label': 'Theo hệ thống'},
+        options: [
+          {'value': 'light', 'label': AppLocalizations.of(context)?.lightTheme ?? 'Light'},
+          {'value': 'dark', 'label': AppLocalizations.of(context)?.darkTheme ?? 'Dark'},
+          {'value': 'system', 'label': AppLocalizations.of(context)?.systemTheme ?? 'System'},
         ],
         onChanged: (value) => _updateSetting('appTheme', value),
       ),
@@ -218,8 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.notifications,
-        title: 'Thông báo',
-        subtitle: 'Nhận thông báo từ ứng dụng',
+        title: AppLocalizations.of(context)?.notifications ?? 'Notifications',
+        subtitle: AppLocalizations.of(context)?.enableNotifications ?? 'Receive notifications from app',
         value: _settings.enableNotifications,
         onChanged: (value) => _updateSetting('enableNotifications', value),
       ),
@@ -230,8 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.play_arrow,
-        title: 'Tự động phát âm',
-        subtitle: 'Phát âm bản dịch sau khi dịch xong',
+        title: AppLocalizations.of(context)?.autoPlay ?? 'Auto Play',
+        subtitle: AppLocalizations.of(context)?.autoPlayDescription ?? 'Play translation audio after translating',
         value: _settings.autoPlayTranslation,
         onChanged: (value) => _updateSetting('autoPlayTranslation', value),
       ),
@@ -244,26 +221,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildDropdownTile(
             icon: Icons.speed,
-            title: 'Tốc độ đọc',
+            title: AppLocalizations.of(context)?.voiceSpeed ?? 'Voice Speed',
             subtitle: _getTTSSpeedName(_settings.ttsVoiceSpeed),
             value: _settings.ttsVoiceSpeed,
             options: const [
-              {'value': 'slow', 'label': 'Chậm'},
-              {'value': 'normal', 'label': 'Bình thường'},
-              {'value': 'fast', 'label': 'Nhanh'},
+              {'value': 'slow', 'label': 'Slow'},
+              {'value': 'normal', 'label': 'Normal'},
+              {'value': 'fast', 'label': 'Fast'},
             ],
             onChanged: (value) => _updateSetting('ttsVoiceSpeed', value),
           ),
           const Divider(height: 1),
           _buildDropdownTile(
             icon: Icons.graphic_eq,
-            title: 'Cao độ giọng',
+            title: AppLocalizations.of(context)?.voicePitch ?? 'Voice Pitch',
             subtitle: _getTTSPitchName(_settings.ttsVoicePitch),
             value: _settings.ttsVoicePitch,
             options: const [
-              {'value': 'low', 'label': 'Thấp'},
-              {'value': 'normal', 'label': 'Bình thường'},
-              {'value': 'high', 'label': 'Cao'},
+              {'value': 'low', 'label': 'Low'},
+              {'value': 'normal', 'label': 'Normal'},
+              {'value': 'high', 'label': 'High'},
             ],
             onChanged: (value) => _updateSetting('ttsVoicePitch', value),
           ),
@@ -276,8 +253,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.volume_up,
-        title: 'Hiệu ứng âm thanh',
-        subtitle: 'Phát âm thanh khi thực hiện thao tác',
+        title: AppLocalizations.of(context)?.soundEffects ?? 'Sound Effects',
+        subtitle: AppLocalizations.of(context)?.soundEffectsDescription ?? 'Play sound when performing actions',
         value: _settings.enableSoundEffects,
         onChanged: (value) => _updateSetting('enableSoundEffects', value),
       ),
@@ -288,8 +265,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.vibration,
-        title: 'Rung',
-        subtitle: 'Rung khi thực hiện thao tác',
+        title: AppLocalizations.of(context)?.vibration ?? 'Vibration',
+        subtitle: AppLocalizations.of(context)?.vibrationDescription ?? 'Vibrate when performing actions',
         value: _settings.enableVibration,
         onChanged: (value) => _updateSetting('enableVibration', value),
       ),
@@ -300,8 +277,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.offline_bolt,
-        title: 'Chế độ offline',
-        subtitle: 'Sử dụng dịch thuật offline khi có thể',
+        title: 'Offline Mode',
+        subtitle: 'Use offline translation when possible',
         value: _settings.isOfflineMode,
         onChanged: (value) => _updateSetting('isOfflineMode', value),
       ),
@@ -312,8 +289,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.auto_awesome,
-        title: 'Tự động nhận dạng ngôn ngữ',
-        subtitle: 'Tự động phát hiện ngôn ngữ nguồn',
+        title: 'Auto Language Detection',
+        subtitle: 'Automatically detect source language',
         value: _settings.autoDetectLanguage,
         onChanged: (value) => _updateSetting('autoDetectLanguage', value),
       ),
@@ -324,8 +301,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.analytics,
-        title: 'Hiển thị độ tin cậy',
-        subtitle: 'Hiển thị điểm tin cậy của bản dịch',
+        title: 'Show Confidence Score',
+        subtitle: 'Display translation confidence score',
         value: _settings.showConfidenceScore,
         onChanged: (value) => _updateSetting('showConfidenceScore', value),
       ),
@@ -336,8 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.history,
-        title: 'Lưu lịch sử',
-        subtitle: 'Lưu các bản dịch vào lịch sử',
+        title: 'Save History',
+        subtitle: 'Save translations to history',
         value: _settings.saveToHistory,
         onChanged: (value) => _updateSetting('saveToHistory', value),
       ),
@@ -348,8 +325,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildSwitchTile(
         icon: Icons.analytics_outlined,
-        title: 'Phân tích sử dụng',
-        subtitle: 'Gửi dữ liệu phân tích để cải thiện ứng dụng',
+        title: 'Usage Analytics',
+        subtitle: 'Send analytics data to improve app',
         value: _settings.enableAnalytics,
         onChanged: (value) => _updateSetting('enableAnalytics', value),
       ),
@@ -360,8 +337,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.storage, color: AppColors.primaryColor),
-        title: const Text('Bộ nhớ đệm'),
-        subtitle: Text('Đã sử dụng: $_cacheSize'),
+        title: const Text('Cache Storage'),
+        subtitle: Text('Used: $_cacheSize'),
         trailing: TextButton(
           onPressed: _clearCache,
           child: const Text('Xóa'),
@@ -374,8 +351,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: _buildDropdownTile(
         icon: Icons.list,
-        title: 'Số lượng lịch sử tối đa',
-        subtitle: '${_settings.maxHistoryItems} mục',
+        title: 'Max History Items',
+        subtitle: '${_settings.maxHistoryItems} items',
         value: _settings.maxHistoryItems,
         options: const [
           {'value': 100, 'label': '100 mục'},
@@ -394,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.info, color: AppColors.primaryColor),
-            title: const Text('Thông tin ứng dụng'),
+            title: const Text('App Information'),
             subtitle: const Text('SnapTranslate v1.0.0'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showAppInfo,
@@ -402,14 +379,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.help, color: AppColors.successColor),
-            title: const Text('Trợ giúp & Hỗ trợ'),
+            title: const Text('Help & Support'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showHelp,
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.privacy_tip, color: AppColors.warningColor),
-            title: const Text('Chính sách bảo mật'),
+            title: const Text('Privacy Policy'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showPrivacyPolicy,
           ),
@@ -481,13 +458,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _updateSetting(String key, dynamic value) async {
     try {
-      await _settingsService.updateSetting(key, value);
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+
+      // Update setting through AppProvider
+      await appProvider.updateSetting(key, value);
+
+      // Update local state
       setState(() {
-        _settings = _settingsService.settings;
+        _settings = appProvider.settings;
       });
 
       // Provide haptic feedback
       await _hapticService.buttonPress();
+
+      // Show feedback for theme/language changes
+      if (key == 'appTheme') {
+        if (mounted) {
+          AppUtils.showSnackBar(context, 'Đã thay đổi giao diện');
+        }
+      } else if (key == 'appLanguage') {
+        if (mounted) {
+          AppUtils.showSnackBar(context, 'Đã thay đổi ngôn ngữ');
+        }
+      }
     } catch (e) {
       if (mounted) {
         AppUtils.showSnackBar(context, 'Lỗi cập nhật cài đặt: $e', isError: true);
@@ -890,6 +883,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .firstWhere((lang) => lang.code == languageCode,
                    orElse: () => LanguageModel(code: languageCode, name: languageCode, nativeName: languageCode));
     return language.nativeName;
+  }
+
+  String _getAppLanguageName(String languageCode) {
+    switch (languageCode) {
+      case 'vi':
+        return 'Tiếng Việt';
+      case 'en':
+        return 'English';
+      case 'zh':
+        return '中文';
+      case 'ja':
+        return '日本語';
+      case 'ko':
+        return '한국어';
+      default:
+        return 'Tiếng Việt';
+    }
   }
 
   String _getThemeName(String theme) {

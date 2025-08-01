@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/feature_card.dart';
 import '../widgets/language_selector.dart';
 import 'image_translation_screen.dart';
@@ -76,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Text(
-                  'Dịch thuật thông minh với AI',
+                  'Smart Translation', // Keep English for now as it's a tagline
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondaryColor,
                   ),
@@ -130,15 +131,15 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           FeatureCard(
             icon: Icons.translate,
-            title: 'Dịch văn bản',
-            subtitle: 'Nhập và dịch văn bản',
+            title: AppLocalizations.of(context)?.textTranslation ?? 'Text Translation',
+            subtitle: 'Enter and translate text',
             color: AppColors.primaryColor,
             onTap: () => _navigateToTextTranslation(),
           ),
           FeatureCard(
             icon: Icons.camera_alt,
-            title: 'Chụp ảnh dịch',
-            subtitle: 'Chụp ảnh và dịch văn bản',
+            title: AppLocalizations.of(context)?.imageTranslation ?? 'Image Translation',
+            subtitle: 'Take photo and translate text',
             color: AppColors.secondaryColor,
             onTap: () => _navigateToImageTranslation(),
           ),
@@ -151,22 +152,22 @@ class _HomeScreenState extends State<HomeScreen> {
           // ),
           FeatureCard(
             icon: Icons.history,
-            title: 'Lịch sử',
-            subtitle: 'Xem lịch sử dịch thuật',
+            title: AppLocalizations.of(context)?.history ?? 'History',
+            subtitle: 'View translation history',
             color: AppColors.successColor,
             onTap: () => _navigateToHistory(),
           ),
           FeatureCard(
             icon: Icons.school,
-            title: 'Học từ vựng',
-            subtitle: 'Flashcard và ôn tập',
+            title: AppLocalizations.of(context)?.vocabulary ?? 'Vocabulary',
+            subtitle: 'Flashcards and review',
             color: AppColors.warningColor,
             onTap: () => _navigateToVocabulary(),
           ),
           FeatureCard(
             icon: Icons.mic,
-            title: 'Dịch hội thoại',
-            subtitle: 'Dịch giọng nói 2 chiều',
+            title: AppLocalizations.of(context)?.voiceTranslation ?? 'Voice Translation',
+            subtitle: 'Two-way voice translation',
             color: AppColors.errorColor,
             onTap: () => _navigateToVoiceTranslation(),
           ),
