@@ -23,7 +23,7 @@ class AppConstants {
   static const String isFirstLaunch = 'is_first_launch';
   
   // Default Languages
-  static const String defaultSourceLanguage = 'auto';
+  static const String defaultSourceLanguage = 'en';
   static const String defaultTargetLanguage = 'vi';
   
   // Camera Settings

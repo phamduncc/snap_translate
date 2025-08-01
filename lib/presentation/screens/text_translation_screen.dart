@@ -123,21 +123,48 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         _fadeController.reverse();
       }
     });
+
+    // Auto scroll when focus on input field
+    _inputFocusNode.addListener(() {
+      if (_inputFocusNode.hasFocus) {
+        // Scroll to show input field when keyboard appears
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            Scrollable.ensureVisible(
+              _inputFocusNode.context!,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _buildLanguageSelector(),
-          Expanded(
-            child: _buildTranslationInterface(),
+      resizeToAvoidBottomInset: true,
+      body: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height -
+                       MediaQuery.of(context).padding.top -
+                       kToolbarHeight,
           ),
-          _buildQuickPhrases(),
-          _buildActionButtons(),
-        ],
+          child: Column(
+            children: [
+              _buildLanguageSelector(),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: _buildTranslationInterface(),
+              ),
+              _buildQuickPhrases(),
+              _buildActionButtons(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -221,10 +248,10 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
             flex: 1,
             child: _buildInputSection(),
           ),
-          
+
           // Divider with translate button
           _buildTranslateButton(),
-          
+
           // Output section
           Expanded(
             flex: 1,
@@ -268,19 +295,23 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: TextField(
-                controller: _inputController,
-                focusNode: _inputFocusNode,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  hintText: 'Nhập văn bản cần dịch...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: AppColors.textHintColor),
+              child: Scrollbar(
+                child: TextField(
+                  controller: _inputController,
+                  focusNode: _inputFocusNode,
+                  maxLines: null,
+                  expands: true,
+                  textAlignVertical: TextAlignVertical.top,
+                  scrollPhysics: const BouncingScrollPhysics(),
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập văn bản cần dịch...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: AppColors.textHintColor),
+                    contentPadding: EdgeInsets.all(8),
+                  ),
+                  style: const TextStyle(fontSize: 16, height: 1.4),
+                  onChanged: _onTextChanged,
                 ),
-                style: const TextStyle(fontSize: 16),
-                onChanged: _onTextChanged,
               ),
             ),
             if (_inputController.text.isNotEmpty)
@@ -536,7 +567,18 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
   }
 
   Future<void> _translateText() async {
-    if (_inputController.text.isEmpty) return;
+    // Handle empty text case
+    if (_inputController.text.trim().isEmpty) {
+      if (mounted) {
+        AppUtils.showSnackBar(context, 'Vui lòng nhập văn bản cần dịch', isError: true);
+        _hapticService.error();
+      }
+      return;
+    }
+
+    // Debug: Check language codes
+    print('DEBUG: Translating from $_sourceLanguage to $_targetLanguage');
+    print('DEBUG: Text to translate: ${_inputController.text}');
 
     setState(() {
       _isTranslating = true;
@@ -548,6 +590,9 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         sourceLanguage: _sourceLanguage,
         targetLanguage: _targetLanguage,
       );
+
+      print('DEBUG: Translation result: ${result.translatedText}');
+      print('DEBUG: Is successful: ${result.isSuccessful}');
 
       if (result.isSuccessful) {
         setState(() {
@@ -570,6 +615,7 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
         _hapticService.error();
       }
     } catch (e) {
+      print('DEBUG: Translation error: $e');
       if (mounted) {
         AppUtils.showSnackBar(context, 'Lỗi dịch thuật: $e', isError: true);
       }
@@ -674,23 +720,28 @@ class _TextTranslationScreenState extends State<TextTranslationScreen>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Expanded(child: Divider()),
           const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: _inputController.text.isEmpty || _isTranslating
-                ? null
-                : _translateText,
-            icon: _isTranslating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.translate),
-            label: Text(_isTranslating ? 'Đang dịch...' : 'Dịch'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          Flexible(
+            child: ElevatedButton.icon(
+              onPressed: _isTranslating ? null : _translateText,
+              icon: _isTranslating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.translate),
+              label: Text(_isTranslating ? 'Đang dịch...' : 'Dịch'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                backgroundColor: _inputController.text.trim().isEmpty
+                    ? AppColors.primaryColor.withValues(alpha: 0.7)
+                    : AppColors.primaryColor,
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
           const SizedBox(width: 16),

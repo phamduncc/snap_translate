@@ -78,11 +78,15 @@ class TranslationService {
     String targetLanguage,
   ) async {
     try {
+      print('DEBUG: Online translation - from: $sourceLanguage, to: $targetLanguage, text: $text');
+
       final translation = await _googleTranslator.translate(
         text,
         from: sourceLanguage == 'auto' ? 'auto' : sourceLanguage,
         to: targetLanguage,
       );
+
+      print('DEBUG: Online translation result: ${translation.text}');
 
       return TranslationResult(
         originalText: text,
@@ -93,6 +97,7 @@ class TranslationService {
         isOffline: false,
       );
     } catch (e) {
+      print('DEBUG: Online translation error: $e');
       throw TranslationException('Online translation failed: $e');
     }
   }
